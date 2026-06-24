@@ -14,7 +14,7 @@ const _storageKey = 'moodly_entries';
 const _darkModeKey = 'moodly_dark_mode';
 
 const _privacyPolicyText = '''
-Last updated: June 24, 2026
+Last updated: June , 2026
 
 Moodly is a simple, local-only mood tracking app.
 
@@ -38,7 +38,7 @@ If you have questions about this policy, contact the app developer through the s
 ''';
 
 const _termsText = '''
-Last updated: June 24, 2026
+Last updated: June , 2026
 
 By using Moodly, you agree to these terms.
 
