@@ -1,122 +1,784 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MoodlyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+const _primary = Color(0xFF8B7CF6);
+const _dark = Color(0xFF241B3D);
+const _bg = Color(0xFFF8F5FF);
+const _storageKey = 'moodly_entries';
+const _darkModeKey = 'moodly_dark_mode';
 
-  // This widget is the root of your application.
+class MoodlyApp extends StatefulWidget {
+  const MoodlyApp({super.key});
+
+  @override
+  State<MoodlyApp> createState() => _MoodlyAppState();
+}
+
+class _MoodlyAppState extends State<MoodlyApp> {
+  bool darkMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() => darkMode = prefs.getBool(_darkModeKey) ?? false);
+  }
+
+  Future<void> setDarkMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_darkModeKey, value);
+    setState(() => darkMode = value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Moodly',
+      debugShowCheckedModeBanner: false,
+      themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+        colorSchemeSeed: _primary,
+        scaffoldBackgroundColor: _bg,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorSchemeSeed: _primary,
+      ),
+      home: SplashScreen(onDarkModeChanged: setDarkMode, darkMode: darkMode),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class MoodEntry {
+  final String mood;
+  final String emoji;
+  final String note;
+  final DateTime date;
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+  MoodEntry({
+    required this.mood,
+    required this.emoji,
+    required this.note,
+    required this.date,
+  });
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+  Map<String, dynamic> toJson() => {
+    'mood': mood,
+    'emoji': emoji,
+    'note': note,
+    'date': date.toIso8601String(),
+  };
 
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  factory MoodEntry.fromJson(Map<String, dynamic> json) {
+    return MoodEntry(
+      mood: json['mood'] ?? 'Okay',
+      emoji: json['emoji'] ?? '😐',
+      note: json['note'] ?? '',
+      date: DateTime.tryParse(json['date'] ?? '') ?? DateTime.now(),
+    );
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class MoodOption {
+  final String mood;
+  final String emoji;
+  final Color color;
 
-  void _incrementCounter() {
+  const MoodOption(this.mood, this.emoji, this.color);
+}
+
+const moodOptions = [
+  MoodOption('Great', '😄', Color(0xFF22C55E)),
+  MoodOption('Good', '🙂', Color(0xFF84CC16)),
+  MoodOption('Okay', '😐', Color(0xFFF59E0B)),
+  MoodOption('Bad', '😔', Color(0xFFF97316)),
+  MoodOption('Terrible', '😢', Color(0xFFEF4444)),
+];
+
+class SplashScreen extends StatelessWidget {
+  final bool darkMode;
+  final ValueChanged<bool> onDarkModeChanged;
+
+  const SplashScreen({
+    super.key,
+    required this.darkMode,
+    required this.onDarkModeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _bg,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            children: [
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(38),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _primary.withOpacity(.18),
+                      blurRadius: 30,
+                      offset: const Offset(0, 18),
+                    ),
+                  ],
+                ),
+                child: Image.asset(
+                  'assets/logo.png',
+                  width: 145,
+                  height: 145,
+                ),
+              ),
+              const SizedBox(height: 30),
+              const Text(
+                'Moodly',
+                style: TextStyle(
+                  fontSize: 44,
+                  fontWeight: FontWeight.w900,
+                  color: _dark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Track your mood, one day at a time.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6B5A7A),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => HomeScreen(
+                          darkMode: darkMode,
+                          onDarkModeChanged: onDarkModeChanged,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Start Tracking'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  final bool darkMode;
+  final ValueChanged<bool> onDarkModeChanged;
+
+  const HomeScreen({
+    super.key,
+    required this.darkMode,
+    required this.onDarkModeChanged,
+  });
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<MoodEntry> entries = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadEntries();
+  }
+
+  Future<void> loadEntries() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString(_storageKey);
+    if (data == null) return;
+
+    final decoded = jsonDecode(data) as List;
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      entries = decoded.map((e) => MoodEntry.fromJson(e)).toList();
+      entries.sort((a, b) => b.date.compareTo(a.date));
     });
+  }
+
+  Future<void> saveEntries() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _storageKey,
+      jsonEncode(entries.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  bool get hasTodayEntry {
+    final now = DateTime.now();
+    return entries.any(
+          (e) =>
+      e.date.year == now.year &&
+          e.date.month == now.month &&
+          e.date.day == now.day,
+    );
+  }
+
+  int get currentStreak {
+    if (entries.isEmpty) return 0;
+
+    final days = entries
+        .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    int streak = 0;
+    DateTime check = DateTime.now();
+    check = DateTime(check.year, check.month, check.day);
+
+    for (final day in days) {
+      if (day == check) {
+        streak++;
+        check = check.subtract(const Duration(days: 1));
+      } else if (day == check.subtract(const Duration(days: 1))) {
+        check = check.subtract(const Duration(days: 1));
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }
+
+  Future<void> openAddMood() async {
+    final result = await Navigator.push<MoodEntry>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddMoodScreen()),
+    );
+
+    if (result != null) {
+      setState(() {
+        entries.removeWhere(
+              (e) =>
+          e.date.year == result.date.year &&
+              e.date.month == result.date.month &&
+              e.date.day == result.date.day,
+        );
+        entries.insert(0, result);
+        entries.sort((a, b) => b.date.compareTo(a.date));
+      });
+      saveEntries();
+    }
+  }
+
+  Future<void> deleteEntry(int index) async {
+    final removed = entries[index];
+    setState(() => entries.removeAt(index));
+    await saveEntries();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Mood entry deleted'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            setState(() {
+              entries.insert(index, removed);
+              entries.sort((a, b) => b.date.compareTo(a.date));
+            });
+            saveEntries();
+          },
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    final latest = entries.isEmpty ? null : entries.first;
+
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: openAddMood,
+        icon: const Icon(Icons.add_rounded),
+        label: Text(hasTodayEntry ? 'Update Today' : 'Add Mood'),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
           children: [
-            const Text('You have pushed the button this many times:'),
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.asset(
+                    'assets/logo.png',
+                    width: 48,
+                    height: 48,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Moodly',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.settings_rounded),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SettingsScreen(
+                          darkMode: widget.darkMode,
+                          onDarkModeChanged: widget.onDarkModeChanged,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: _dark,
+                borderRadius: BorderRadius.circular(32),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Today’s Mood',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    latest == null ? 'How are you feeling?' : latest.emoji,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: latest == null ? 30 : 64,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (latest != null)
+                    Text(
+                      latest.mood,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      _StatBox(title: 'Entries', value: entries.length.toString()),
+                      const SizedBox(width: 12),
+                      _StatBox(title: 'Streak', value: '$currentStreak days'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            const Text(
+              'Mood History',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 12),
+            if (entries.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  children: [
+                    Image.asset('assets/logo.png', width: 72, height: 72),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'No moods yet',
+                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Add your first mood entry and start understanding your days.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...entries.asMap().entries.map((entry) {
+                final index = entry.key;
+                final mood = entry.value;
+
+                return Dismissible(
+                  key: ValueKey('${mood.date}-${mood.mood}-$index'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 22),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(Icons.delete_rounded, color: Colors.white),
+                  ),
+                  onDismissed: (_) => deleteEntry(index),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(mood.emoji, style: const TextStyle(fontSize: 36)),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                mood.mood,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              Text(_formatDate(mood.date)),
+                              if (mood.note.isNotEmpty)
+                                Text(
+                                  mood.note,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            const SizedBox(height: 90),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatBox extends StatelessWidget {
+  final String title;
+  final String value;
+
+  const _StatBox({required this.title, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(.12),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(color: Colors.white70)),
+            const SizedBox(height: 4),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+    );
+  }
+}
+
+class AddMoodScreen extends StatefulWidget {
+  const AddMoodScreen({super.key});
+
+  @override
+  State<AddMoodScreen> createState() => _AddMoodScreenState();
+}
+
+class _AddMoodScreenState extends State<AddMoodScreen> {
+  MoodOption selected = moodOptions[1];
+  final noteController = TextEditingController();
+
+  void save() {
+    Navigator.pop(
+      context,
+      MoodEntry(
+        mood: selected.mood,
+        emoji: selected.emoji,
+        note: noteController.text.trim(),
+        date: DateTime.now(),
       ),
     );
   }
+
+  @override
+  void dispose() {
+    noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add Mood'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const Text(
+            'How do you feel today?',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: moodOptions.map((option) {
+              final isSelected = option.mood == selected.mood;
+
+              return GestureDetector(
+                onTap: () => setState(() => selected = option),
+                child: Container(
+                  width: 102,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? option.color.withOpacity(.18)
+                        : Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: isSelected ? option.color : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(option.emoji, style: const TextStyle(fontSize: 34)),
+                      const SizedBox(height: 8),
+                      Text(
+                        option.mood,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            controller: noteController,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Note optional',
+              hintText: 'Write a small note about your day...',
+              filled: true,
+              prefixIcon: Icon(Icons.notes_rounded),
+            ),
+          ),
+          const SizedBox(height: 28),
+          SizedBox(
+            height: 56,
+            child: FilledButton(
+              onPressed: save,
+              child: const Text('Save Mood'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SettingsScreen extends StatelessWidget {
+  final bool darkMode;
+  final ValueChanged<bool> onDarkModeChanged;
+
+  const SettingsScreen({
+    super.key,
+    required this.darkMode,
+    required this.onDarkModeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE9FE),
+              borderRadius: BorderRadius.circular(26),
+            ),
+            child: Row(
+              children: [
+                Image.asset('assets/logo.png', width: 70, height: 70),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Text(
+                    'Moodly\nTrack your mood daily.',
+                    style: TextStyle(
+                      color: _dark,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          SwitchListTile(
+            value: darkMode,
+            onChanged: onDarkModeChanged,
+            title: const Text('Dark Mode'),
+            secondary: const Icon(Icons.dark_mode_rounded),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip_rounded),
+            title: const Text('Privacy Policy'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.article_rounded),
+            title: const Text('Terms & Conditions'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TermsScreen()),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Center(
+            child: Text(
+              'Version 1.0.0',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PrivacyPolicyScreen extends StatelessWidget {
+  const PrivacyPolicyScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const TextPage(
+      title: 'Privacy Policy',
+      text:
+      'Moodly is a simple mood tracking app. Your mood entries, notes, dates, and app settings are stored locally on your device using local storage. Moodly does not require login, does not use a backend server, does not use Firebase, does not show ads, does not use analytics, and does not share data with third parties. You can delete stored data by deleting entries, clearing app data, or uninstalling the app.',
+    );
+  }
+}
+
+class TermsScreen extends StatelessWidget {
+  const TermsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const TextPage(
+      title: 'Terms & Conditions',
+      text:
+      'Moodly is provided as a simple personal mood tracking tool. The app is not medical advice, mental health treatment, diagnosis, or therapy. You are responsible for how you use the app and for any information you choose to enter. If you need medical or mental health support, contact a qualified professional or local emergency service.',
+    );
+  }
+}
+
+class TextPage extends StatelessWidget {
+  final String title;
+  final String text;
+
+  const TextPage({
+    super.key,
+    required this.title,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: ListView(
+        padding: const EdgeInsets.all(22),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 16, height: 1.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatDate(DateTime date) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  return '${months[date.month - 1]} ${date.day}, ${date.year}';
 }
