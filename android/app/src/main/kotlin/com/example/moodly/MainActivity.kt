@@ -1,4 +1,4 @@
-package com.example.moodly
+package com.moodly.tracker
 
 import io.flutter.embedding.android.FlutterActivity
 
