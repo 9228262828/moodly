@@ -13,6 +13,54 @@ const _bg = Color(0xFFF8F5FF);
 const _storageKey = 'moodly_entries';
 const _darkModeKey = 'moodly_dark_mode';
 
+const _privacyPolicyText = '''
+Last updated: June 24, 2026
+
+Moodly is a simple, local-only mood tracking app.
+
+What Moodly stores
+Moodly stores the mood entries you create, including the selected mood, emoji, optional note, entry date, and app settings such as dark mode.
+
+Where your data stays
+Your data is saved only on your device using local app storage. Moodly does not require an account, does not use a backend server, does not use Firebase, does not show ads, does not use analytics, does not send notifications, and does not send your mood entries or notes to anyone.
+
+Deleting your data
+You can delete individual mood entries in the app. You can also remove all stored Moodly data by clearing the app data in your device settings or uninstalling the app.
+
+Third parties
+Moodly does not sell, rent, share, or transfer your personal data to third parties.
+
+Children's privacy
+Moodly is intended for personal journaling and mood tracking. If you are a parent or guardian and want data removed, delete the entries, clear the app data, or uninstall the app from the device.
+
+Contact
+If you have questions about this policy, contact the app developer through the store listing or project page where you downloaded Moodly.
+''';
+
+const _termsText = '''
+Last updated: June 24, 2026
+
+By using Moodly, you agree to these terms.
+
+Local personal tool
+Moodly is provided as a simple personal mood tracking tool. The app keeps entries local to your device and does not provide accounts, cloud sync, backup, analytics, ads, notifications, or backend services.
+
+Not medical advice
+Moodly is not medical advice, mental health treatment, diagnosis, crisis support, or therapy. If you need medical or mental health support, contact a qualified professional. If you are in immediate danger or crisis, contact local emergency services.
+
+Your responsibility
+You are responsible for how you use the app and for the information you choose to enter. Keep your device secure if your entries are private or sensitive.
+
+Data loss
+Because Moodly is local-only, entries may be lost if you delete entries, clear app data, uninstall the app, reset your device, or lose access to your device.
+
+Availability and changes
+Moodly is provided as-is. The app may be changed, improved, or discontinued without notice.
+
+Limitation of liability
+To the fullest extent allowed by law, the developer is not responsible for losses or damages arising from your use of Moodly.
+''';
+
 class MoodlyApp extends StatefulWidget {
   const MoodlyApp({super.key});
 
@@ -107,6 +155,73 @@ const moodOptions = [
   MoodOption('Terrible', '😢', Color(0xFFEF4444)),
 ];
 
+class _MoodlyLogo extends StatelessWidget {
+  final double size;
+  final bool framed;
+
+  const _MoodlyLogo({
+    required this.size,
+    this.framed = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final logo = ClipRRect(
+      borderRadius: BorderRadius.circular(size * .22),
+      child: Image.asset(
+        'assets/logo.png',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => _LogoFallback(size: size),
+      ),
+    );
+
+    if (!framed) {
+      return SizedBox.square(dimension: size, child: logo);
+    }
+
+    return Container(
+      padding: EdgeInsets.all(size * .16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(size * .28),
+        boxShadow: [
+          BoxShadow(
+            color: _primary.withOpacity(.18),
+            blurRadius: 30,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: logo,
+    );
+  }
+}
+
+class _LogoFallback extends StatelessWidget {
+  final double size;
+
+  const _LogoFallback({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: _primary.withOpacity(.14),
+        borderRadius: BorderRadius.circular(size * .22),
+      ),
+      child: Icon(
+        Icons.mood_rounded,
+        color: _primary,
+        size: size * .56,
+      ),
+    );
+  }
+}
+
 class SplashScreen extends StatelessWidget {
   final bool darkMode;
   final ValueChanged<bool> onDarkModeChanged;
@@ -122,70 +237,75 @@ class SplashScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            children: [
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(38),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _primary.withOpacity(.18),
-                      blurRadius: 30,
-                      offset: const Offset(0, 18),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxHeight < 620;
+            final padding = compact ? 20.0 : 28.0;
+            final minHeight = constraints.maxHeight > padding * 2
+                ? constraints.maxHeight - (padding * 2)
+                : 0.0;
+
+            return SingleChildScrollView(
+              padding: EdgeInsets.all(padding),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: minHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SizedBox(height: compact ? 4 : 20),
+                    Column(
+                      children: [
+                        _MoodlyLogo(
+                          size: compact ? 108 : 145,
+                          framed: true,
+                        ),
+                        SizedBox(height: compact ? 22 : 30),
+                        const Text(
+                          'Moodly',
+                          style: TextStyle(
+                            fontSize: 44,
+                            fontWeight: FontWeight.w900,
+                            color: _dark,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Track your mood, one day at a time.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF6B5A7A),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(top: compact ? 24 : 36),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: FilledButton(
+                          onPressed: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => HomeScreen(
+                                  darkMode: darkMode,
+                                  onDarkModeChanged: onDarkModeChanged,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text('Start Tracking'),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                child: Image.asset(
-                  'assets/logo.png',
-                  width: 145,
-                  height: 145,
-                ),
               ),
-              const SizedBox(height: 30),
-              const Text(
-                'Moodly',
-                style: TextStyle(
-                  fontSize: 44,
-                  fontWeight: FontWeight.w900,
-                  color: _dark,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Track your mood, one day at a time.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF6B5A7A),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => HomeScreen(
-                          darkMode: darkMode,
-                          onDarkModeChanged: onDarkModeChanged,
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('Start Tracking'),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -294,27 +414,54 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<bool> confirmDelete(MoodEntry mood) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete this mood?'),
+          content: Text(
+            'This will remove your ${mood.mood.toLowerCase()} entry from '
+            '${_formatDate(mood.date)}. You can undo right after deleting.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return confirmed ?? false;
+  }
+
   Future<void> deleteEntry(int index) async {
     final removed = entries[index];
     setState(() => entries.removeAt(index));
     await saveEntries();
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
         content: const Text('Mood entry deleted'),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
             setState(() {
-              entries.insert(index, removed);
+              entries.insert(index.clamp(0, entries.length).toInt(), removed);
               entries.sort((a, b) => b.date.compareTo(a.date));
             });
             saveEntries();
           },
         ),
-      ),
-    );
+      ));
   }
 
   @override
@@ -335,11 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Image.asset(
-                    'assets/logo.png',
-                    width: 48,
-                    height: 48,
-                  ),
+                  child: const _MoodlyLogo(size: 48),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -422,7 +565,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Column(
                   children: [
-                    Image.asset('assets/logo.png', width: 72, height: 72),
+                    const _MoodlyLogo(size: 72),
                     const SizedBox(height: 14),
                     const Text(
                       'No moods yet',
@@ -430,8 +573,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Add your first mood entry and start understanding your days.',
+                      'Add your first entry to start seeing your mood history here.',
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: openAddMood,
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Add first mood'),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Private and stored only on this device.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -442,8 +600,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 final mood = entry.value;
 
                 return Dismissible(
-                  key: ValueKey('${mood.date}-${mood.mood}-$index'),
+                  key: ValueKey(
+                    '${mood.date.toIso8601String()}-${mood.mood}-${mood.note}',
+                  ),
                   direction: DismissDirection.endToStart,
+                  confirmDismiss: (_) => confirmDelete(mood),
                   background: Container(
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.only(right: 22),
@@ -521,6 +682,8 @@ class _StatBox extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
@@ -661,7 +824,7 @@ class SettingsScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Image.asset('assets/logo.png', width: 70, height: 70),
+                const _MoodlyLogo(size: 64),
                 const SizedBox(width: 16),
                 const Expanded(
                   child: Text(
@@ -722,8 +885,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const TextPage(
       title: 'Privacy Policy',
-      text:
-      'Moodly is a simple mood tracking app. Your mood entries, notes, dates, and app settings are stored locally on your device using local storage. Moodly does not require login, does not use a backend server, does not use Firebase, does not show ads, does not use analytics, and does not share data with third parties. You can delete stored data by deleting entries, clearing app data, or uninstalling the app.',
+      text: _privacyPolicyText,
     );
   }
 }
@@ -735,8 +897,7 @@ class TermsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const TextPage(
       title: 'Terms & Conditions',
-      text:
-      'Moodly is provided as a simple personal mood tracking tool. The app is not medical advice, mental health treatment, diagnosis, or therapy. You are responsible for how you use the app and for any information you choose to enter. If you need medical or mental health support, contact a qualified professional or local emergency service.',
+      text: _termsText,
     );
   }
 }
